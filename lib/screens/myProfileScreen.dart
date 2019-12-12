@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:instagram_clone/blocs/instagrambloc.dart';
 import 'package:instagram_clone/models/post.dart';
 import 'package:instagram_clone/models/user.dart';
@@ -7,6 +8,8 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:instagram_clone/screens/mainscreen.dart';
 import 'package:instagram_clone/screens/onePost.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:developer';
+import 'newPost.dart';
 
 class MyProfile extends StatefulWidget {
   @override
@@ -17,6 +20,17 @@ class _MyProfileState extends State<MyProfile> {
   int screen = 4;
   // TextEditingController usernameCtrl = TextEditingController();
   // TextEditingController passwordCtrl = TextEditingController();
+
+  Future openImagePicker() async {
+    var image = await ImagePicker.pickImage(source: ImageSource.gallery);
+    // String base64Img = base64Encode(image.readAsBytesSync());
+
+    if (image != null) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => NewPost(image)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     InstagramBloc bloc = Provider.of<InstagramBloc>(context);
@@ -46,17 +60,14 @@ class _MyProfileState extends State<MyProfile> {
 
     Widget myBio() {
       String bio = "";
-      if(myAccount.bio!=null){
+      if (myAccount.bio != null) {
         bio = myAccount.bio;
       }
       return Column(
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.only(left: 15.0, bottom:15.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(bio)
-              ),
+            padding: const EdgeInsets.only(left: 15.0, bottom: 15.0),
+            child: Align(alignment: Alignment.centerLeft, child: Text(bio)),
           ),
         ],
       );
@@ -87,13 +98,22 @@ class _MyProfileState extends State<MyProfile> {
       );
     }
 
-    Card getStructuredGridCell(Post post) {
+    Card getStructuredGridCell(Post post, int index) {
       return Card(
           elevation: 1.5,
           child: InkWell(
-            onTap: () {
-              Navigator.push(context,
+            onTap: () async {
+              final res = await Navigator.push(context,
                   MaterialPageRoute(builder: (context) => OnePost(post)));
+
+              if (res != null) {
+                //delete post from real list
+                setState(() {
+                  bloc.my_posts.removeAt(index);
+                });
+              }
+
+              // log((result).toString());
             },
             child: Column(children: <Widget>[
               Expanded(
@@ -110,6 +130,7 @@ class _MyProfileState extends State<MyProfile> {
     return Scaffold(
         appBar: AppBar(
           title: Text(bloc.myAccount.email),
+          leading: Container(),
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
@@ -121,6 +142,12 @@ class _MyProfileState extends State<MyProfile> {
             if (i == 0) {
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => MainScreen()));
+            } else if (i == 2) {
+              // MyProfile();
+              openImagePicker();
+              // print("Going to new post");
+              // Navigator.push(
+              //     context, MaterialPageRoute(builder: (context) => NewPost()));
             }
           },
 
@@ -165,7 +192,7 @@ class _MyProfileState extends State<MyProfile> {
               child: GridView.count(
                 crossAxisCount: 2,
                 children: List.generate(bloc.my_posts.length, (index) {
-                  return getStructuredGridCell(bloc.my_posts[index]);
+                  return getStructuredGridCell(bloc.my_posts[index], index);
                 }),
               ),
             )

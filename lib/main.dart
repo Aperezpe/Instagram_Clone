@@ -14,6 +14,7 @@ class MyApp extends StatelessWidget {
     InstagramBloc bloc = InstagramBloc();
     return ChangeNotifierProvider(builder: (_) => bloc,
     child: MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         primaryColor: Colors.white,
@@ -34,6 +35,7 @@ class _SetupWidgetState extends State<SetupWidget> {
   @override
   Widget build(BuildContext context) {
     InstagramBloc bloc = Provider.of<InstagramBloc>(context);
+    
     
     if(bloc.isLoggedIn){
       if(bloc.isReady){

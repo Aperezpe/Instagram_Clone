@@ -1,3 +1,5 @@
+
+
 class Post {
   // property :id, Serial
   // #fill in the rest
@@ -41,4 +43,5 @@ class Post {
         profile_image_url: json["profile_image_url"],
         liked: json["liked"]);
   }
+
 }

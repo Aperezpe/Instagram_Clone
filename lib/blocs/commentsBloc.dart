@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:instagram_clone/models/post.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,7 +23,7 @@ class CommentsBloc extends ChangeNotifier {
   // int user_id;
   //List<Post> timeline = [];
   List<Comment> postComments = [];
-  List<User> users = [];
+  // List<User> users = [];//
   Map<int, User> usersMap = {};
   // List<User> users;
   User userAccount;
@@ -62,53 +64,6 @@ class CommentsBloc extends ChangeNotifier {
     }
   }
 
-  // Future<void> attemptLogin(String username, String password) async {
-  //   print(
-  //       "attempting login https://nameless-escarpment-45560.herokuapp.com/api/login?username=${username}&password=${password}");
-  //   var response = await http.get(
-  //       "https://nameless-escarpment-45560.herokuapp.com/api/login?username=${username}&password=${password}");
-  //   if (response.statusCode == 200) {
-  //     print("succeeded login");
-  //     didLoginFail = false;
-  //     Map<String, dynamic> jsonData = json.decode(response.body);
-  //     token = jsonData["token"];
-  //     SharedPreferences prefs = await SharedPreferences.getInstance();
-  //     await prefs.setString('token', token);
-  //     if (token != null) {
-  //       isLoggedIn = true;
-  //     }
-  //     notifyListeners();
-  //   } else {
-  //     print(response.body);
-  //     print("login did not succeed");
-  //     didLoginFail = true;
-  //     notifyListeners();
-  //   }
-  // }
-
-  // Future<void> logout() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   await prefs.remove("token");
-  //   isLoggedIn = false;
-  //   notifyListeners();
-  // }
-
-  // Future<bool> fetchTimeline() async {
-  //   var response = await http.get(
-  //       "https://nameless-escarpment-45560.herokuapp.com/api/v1/posts",
-  //       headers: {HttpHeaders.authorizationHeader: "Bearer $token"});
-  //   if(response.statusCode == 200){
-  //     List<dynamic> serverPosts = json.decode(response.body);
-  //     for(int i = 0; i < serverPosts.length; i++){
-  //       timeline.add(Post.fromJson(serverPosts[i]));
-
-  //     }
-  //     return true;
-  //   }
-  //   return false;
-  // }
-
-
 
   Future<bool> fetchComments() async {
     print("getting user data #comments");
@@ -128,7 +83,7 @@ class CommentsBloc extends ChangeNotifier {
 
           
           usersMap[postComments[i].user_id] = User.fromJson(jsonDecode(userResponse.body));
-          users.add(User.fromJson(jsonDecode(userResponse.body)));
+          // users.add(User.fromJson(jsonDecode(userResponse.body)));
         }else{
           print("problemas obteniendo usuario por comentario");
         }
@@ -139,6 +94,42 @@ class CommentsBloc extends ChangeNotifier {
       print("problema obteniendo comments map");
     }
     return false;
+  }
+
+  Future<dynamic> getComments() async {
+
+    List<Comment> listComments = [];
+    
+    log("getting user data #comments");
+    var response = await http.get(
+        "https://nameless-escarpment-45560.herokuapp.com/api/v1/posts/${post.id}/comments",
+        headers: {HttpHeaders.authorizationHeader: "Bearer $token"});
+
+    if (response.statusCode == 200) {
+      List<dynamic> serverComments = json.decode(response.body);
+      for (int i = 0; i < serverComments.length; ++i) {
+        listComments.add(Comment.fromJson(serverComments[i]));
+
+        var userResponse = await http.get(
+            "https://nameless-escarpment-45560.herokuapp.com/api/v1/users/${postComments[i].user_id}",
+            headers: {HttpHeaders.authorizationHeader: "Bearer $token"});
+        if (userResponse.statusCode==200){
+          log("user ${postComments[i].user_id} retrieved successfully");
+
+          
+          usersMap[listComments[i].user_id] = User.fromJson(jsonDecode(userResponse.body));
+          // users.add(User.fromJson(jsonDecode(userResponse.body)));
+        }else{
+         log("problemas obteniendo usuario por comentario");
+        }
+
+      }
+      postComments = listComments;
+      return listComments;
+    }else{
+      log("problema obteniendo comments map");
+    }
+    return null;
   }
 
   Future<bool> fetchAccounts() async {

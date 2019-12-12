@@ -13,6 +13,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:instagram_clone/screens/comments.dart';
+import 'package:instagram_clone/screens/newPost.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:instagram_clone/models/comment.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -22,6 +25,18 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int screen = 0;
 
+  File _image;
+
+  Future openImagePicker() async {
+    var image = await ImagePicker.pickImage(source: ImageSource.gallery);
+    // String base64Img = base64Encode(image.readAsBytesSync());
+
+    if (image != null) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => NewPost(image)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     InstagramBloc bloc = Provider.of<InstagramBloc>(context);
@@ -29,6 +44,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Instagram"),
+        leading: Container(),
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -41,8 +57,18 @@ class _MainScreenState extends State<MainScreen> {
           if (i == 4) {
             // MyProfile();
             print("Going to my profile");
-            Navigator.push(
-                context, MaterialPageRoute(builder: (context) => MyProfile()));
+            bloc.fetchAccount().then((onValue) {
+              if (onValue) {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => MyProfile()));
+              }
+            });
+          } else if (i == 2) {
+            // MyProfile();
+            openImagePicker();
+            // print("Going to new post");
+            // Navigator.push(
+            //     context, MaterialPageRoute(builder: (context) => NewPost()));
           }
         },
 
@@ -169,22 +195,44 @@ class _PostViewState extends State<PostView> {
     }
 
     return InkWell(
-      onTap: () {
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => Comments(widget.post)));
+      onTap: () async {
+        // try to return comments length
+        final newCommentsLength = await Navigator.push(context,
+            MaterialPageRoute(builder: (context) => Comments(widget.post)));
+
+        if (newCommentsLength != null) {
+          setState(() {
+            widget.post.comments_count = newCommentsLength;
+          });
+        }
       },
       child: Text(msg, style: TextStyle(color: Colors.black.withOpacity(0.5))),
     );
   }
 
+  Comment c = Comment();
+
   Widget addComment() {
+    InstagramBloc bloc = Provider.of<InstagramBloc>(context);
     return Stack(alignment: const Alignment(1.0, 1.0), children: <Widget>[
       TextField(
           controller: commentTxt,
           decoration: InputDecoration(hintText: "Add a comment...")),
       RaisedButton(
         child: Text("Post"),
-        onPressed: () => {},
+        onPressed: () => {
+          c
+              .postComment(widget.post.id, bloc.token, commentTxt.text)
+              .then((onValue) => {
+                    if (onValue)
+                      {
+                        setState(() {
+                          widget.post.comments_count++;
+                          commentTxt.clear();
+                        })
+                      }
+                  })
+        },
       )
     ]);
   }
@@ -194,7 +242,6 @@ class _PostViewState extends State<PostView> {
   @override
   Widget build(BuildContext context) {
     InstagramBloc bloc = Provider.of<InstagramBloc>(context);
-    // print(u.email);
     return Wrap(children: <Widget>[
       Row(
         children: <Widget>[
@@ -207,20 +254,6 @@ class _PostViewState extends State<PostView> {
                   image: new DecorationImage(
                       fit: BoxFit.cover,
                       image: NetworkImage(widget.post.profile_image_url)))),
-          //       Padding(
-          //         padding: const EdgeInsets.all(8.0),
-          //         child:
-
-          //         CircleAvatar(
-          //           radius: 20,
-          //           backgroundImage: CachedNetworkImage(
-          //     imageUrl: widget.post.profile_image_url,
-          //     placeholder: (context, url) => CircularProgressIndicator(),
-          //     errorWidget: (context, url, error) => Icon(Icons.error),
-          //  ),
-          //           // backgroundColor: Colors.blue,
-          //         ),
-          //       ),
           Column(
             children: <Widget>[
               Container(
@@ -255,14 +288,19 @@ class _PostViewState extends State<PostView> {
                   )),
             ],
           ),
-          Container(
-            width: 200,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Icon(
-                Icons.more_horiz,
-                color: Colors.black,
-                size: 24.0,
+          Flexible(
+            child: Container(
+              width: 200,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Icon(
+                    Icons.more_horiz,
+                    color: Colors.black,
+                    size: 24.0,
+                  ),
+                ),
               ),
             ),
           ),
@@ -284,24 +322,38 @@ class _PostViewState extends State<PostView> {
                   padding: const EdgeInsets.all(9.0),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Icon(
-                      Icons.favorite_border,
-                      color: Colors.black,
+                    child: IconButton(
+                      icon: widget.post.liked
+                          ? Icon(Icons.favorite, color: Colors.red)
+                          : Icon(Icons.favorite_border, color: Colors.black),
+                      onPressed: () {
+                        setState(() {
+                          widget.post.liked = !widget.post.liked;
+                          widget.post.likes_count++;
+
+                          if (widget.post.liked == false) {
+                            widget.post.likes_count =
+                                widget.post.likes_count - 2;
+                          }
+                        });
+                      },
                       // size: 28.0,
                     ),
                   ),
                 ),
               ),
-              Container(
-                width: 110,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Icon(
-                      Icons.bookmark_border,
-                      color: Colors.black,
-                      size: 25.0,
+              Flexible(
+                child: Container(
+                  width: 110,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Icon(
+                        Icons.bookmark_border,
+                        color: Colors.black,
+                        size: 25.0,
+                      ),
                     ),
                   ),
                 ),
@@ -314,24 +366,13 @@ class _PostViewState extends State<PostView> {
           Padding(
             padding: const EdgeInsets.only(left: 10.0, bottom: 6.0),
             child: caption(),
-            // Row(
-            //   children: <Widget>[
-            //     Text(
-            //       widget.post.username + "  ",
-            //       style: TextStyle(
-            //         fontWeight: FontWeight.w700,
-            //       ),
-            //     ),
-            //     caption(widget.post.caption),
-            //   ],
-            // ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 10.0),
-            child: commentsCt(),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 10.0, bottom: 6.0),
+            child: commentsCt(),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0, bottom: 15.0),
             child: FutureBuilder(
                 future: Future.delayed(Duration(milliseconds: 2000)),
                 builder: (c, s) => s.connectionState == ConnectionState.done

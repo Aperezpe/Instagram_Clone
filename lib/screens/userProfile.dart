@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:instagram_clone/main.dart' as prefix0;
 // import 'package:instagram_clone/blocs/instagrambloc.dart';
 // import 'package:instagram_clone/main.dart';
@@ -16,6 +17,8 @@ import 'package:http/http.dart' as http;
 import 'package:instagram_clone/screens/loadingscreen.dart';
 import 'package:instagram_clone/blocs/userProfileBloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
+import 'newPost.dart';
 
 class UserProfile extends StatefulWidget {
   final int user_id;
@@ -64,6 +67,16 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   int screen = 0;
+
+  Future openImagePicker() async {
+    var image = await ImagePicker.pickImage(source: ImageSource.gallery);
+    // String base64Img = base64Encode(image.readAsBytesSync());
+
+    if (image != null) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => NewPost(image)));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +188,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             } else if (i == 4) {
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => MyProfile()));
+            }else if (i == 2) {
+              // MyProfile();
+              openImagePicker();
+              // print("Going to new post");
+              // Navigator.push(
+              //     context, MaterialPageRoute(builder: (context) => NewPost()));
             }
           },
 
